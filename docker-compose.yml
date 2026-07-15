@@ -27,7 +27,7 @@ services:
       ConnectionStrings__Default: "Host=db;Port=5432;Database=shop;Username=shop;Password=shop"
       Jwt__Key: "docker-compose-signing-key-change-me-at-least-32-bytes"
       Sweeper__IntervalSeconds: "60"
-      Sweeper__DraftExpiryMinutes: "30"
+      Sweeper__DraftExpiryMinutes: "1"
     ports:
       - "8080:8080"
 
