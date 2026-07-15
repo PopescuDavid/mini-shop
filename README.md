@@ -29,6 +29,12 @@ This starts PostgreSQL and the API. On startup the API waits for the database, a
 
 Open http://localhost:8080 and sign in with the seeded credentials below.
 
+**Follow the logs** (handy for watching the background job run):
+
+```bash
+docker compose logs -f api
+```
+
 ## Seeded credentials
 
 | Email | Password |
@@ -134,7 +140,7 @@ sweeper           → Expired      stale drafts release their stock
 
 ### Background job
 
-`AbandonedOrderSweeper` (a `BackgroundService` driven by `PeriodicTimer`) runs on a configurable interval, finds `Draft` orders untouched for longer than a configurable threshold, marks them `Expired`, releases their reserved stock, and logs what it did on every run. Configure via `Sweeper__IntervalSeconds` and `Sweeper__DraftExpiryMinutes` (defaults: 60s / 30min). Lower the threshold to watch it expire a draft.
+`AbandonedOrderSweeper` (a `BackgroundService` driven by `PeriodicTimer`) runs on a configurable interval, finds `Draft` orders untouched for longer than a configurable threshold, marks them `Expired`, releases their reserved stock, and logs what it did on every run. Configure via `Sweeper__IntervalSeconds` and `Sweeper__DraftExpiryMinutes`; the code defaults are 60s / 30min, and the Docker stack sets a **1-minute** expiry so the job is easy to observe. Watch it with `docker compose logs -f api` — each run logs either `Sweep complete: no abandoned drafts.` or `Sweep complete: expired N draft(s), released M reserved unit(s).`.
 
 ## NOTES
 
