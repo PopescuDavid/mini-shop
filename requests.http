@@ -1,0 +1,54 @@
+@host = http://localhost:8080
+# When running locally with `dotnet run`, use the port printed in the console (http://localhost:5182).
+
+# 1) Log in, then copy the returned "token" into @token.
+@token = PASTE_JWT_HERE
+# 2) Create an order, then copy its "id" into @orderId.
+@orderId = PASTE_ORDER_ID_HERE
+# 3) Copy a product id from GET /products into @productId.
+@productId = PASTE_PRODUCT_ID_HERE
+
+### Log in as the seeded user -> returns a JWT
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@shop.test",
+  "password": "Passw0rd!"
+}
+
+### List products (paging + sorting: sortBy = name | price | stock | category | createdAt)
+GET {{host}}/products?page=1&pageSize=5&sortBy=price&sortDir=desc
+
+### Create an order with one or more line items and an optional coupon
+POST {{host}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "productId": "{{productId}}", "quantity": 2 }
+  ],
+  "couponCode": "SAVE10"
+}
+
+### Get a single order (items + computed subtotal / discount / total)
+GET {{host}}/orders/{{orderId}}
+Authorization: Bearer {{token}}
+
+### Update an order: replace items, swap the coupon, and place it
+PUT {{host}}/orders/{{orderId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "productId": "{{productId}}", "quantity": 1 }
+  ],
+  "couponCode": "FLAT15",
+  "status": "Placed"
+}
+
+### Delete (soft-delete) an order
+DELETE {{host}}/orders/{{orderId}}
+Authorization: Bearer {{token}}
