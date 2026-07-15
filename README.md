@@ -49,7 +49,7 @@ Open http://localhost:8080 and sign in with the seeded credentials below.
 1. Log in as the seeded user (the form is pre-filled).
 2. Browse the paged, sortable product list.
 3. Add products with quantities to build an order, optionally apply a coupon, and create it.
-4. View the created order with its computed totals, and delete it.
+4. View the created order with its computed totals, **place** it (Draft → Placed), or delete it.
 
 ## API
 

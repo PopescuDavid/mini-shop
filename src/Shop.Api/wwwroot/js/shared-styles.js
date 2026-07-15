@@ -83,6 +83,8 @@ sheet.replaceSync(`
     .total { border-top: 1px solid var(--border); padding-top: 0.6rem; margin-top: 0.3rem; }
     .pager { margin-top: 0.5rem; }
     .sort select { width: auto; }
+    .actions { margin-top: 0.75rem; }
+    .actions button { flex: 1; width: auto; margin-top: 0; }
 `);
 
 export const sharedStyles = sheet;

@@ -55,6 +55,7 @@ class OrderView extends HTMLElement {
             if (id) { this.#trackedId = id; this.#load(id); }
         });
         this.shadowRoot.getElementById('delete')?.addEventListener('click', () => this.#delete(this.#order.id));
+        this.shadowRoot.getElementById('place')?.addEventListener('click', () => this.#place(this.#order));
     }
 
     #details(order) {
@@ -77,7 +78,10 @@ class OrderView extends HTMLElement {
             <div class="row spread"><span class="muted">Subtotal</span><span>${money(order.subtotal)}</span></div>
             ${order.couponCode ? `<div class="row spread"><span class="muted">Discount (${order.couponCode})</span><span>−${money(order.discount)}</span></div>` : ''}
             <div class="row spread total"><strong>Total</strong><strong>${money(order.total)}</strong></div>
-            <button id="delete" class="danger" style="margin-top:0.75rem">Delete order</button>`;
+            <div class="row actions">
+                ${order.status === 'Draft' ? `<button id="place" class="primary">Place order</button>` : ''}
+                <button id="delete" class="danger">Delete order</button>
+            </div>`;
     }
 
     async #delete(id) {
@@ -92,6 +96,20 @@ class OrderView extends HTMLElement {
             this.#error = err.message;
             this.render();
         }
+    }
+
+    async #place(order) {
+        this.#error = null;
+        try {
+            this.#order = await api.updateOrder(order.id, {
+                items: order.items.map(item => ({ productId: item.productId, quantity: item.quantity })),
+                couponCode: order.couponCode,
+                status: 'Placed'
+            });
+        } catch (err) {
+            this.#error = err.message;
+        }
+        this.render();
     }
 }
 
