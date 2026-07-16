@@ -160,11 +160,3 @@ sweeper           → Expired      stale drafts release their stock
 
 **With more time**
 - Optimistic concurrency on stock (an `xmin` rowversion on `Product` with a retry) to close the documented read-modify-write race; a scale-safe (single-owner) sweeper for multi-instance deployments; request-validation via FluentValidation; login rate-limiting; observability (structured tracing/metrics); and a CI pipeline running the test suite.
-
-## AI usage
-
-- Used an AI assistant (Claude Code) to scaffold the solution, EF configuration, DTOs, controllers, the background job, and the first pass of the Web Components.
-- Reviewed and reworked the generated code throughout: consistent naming, removed comments, tightened method boundaries, and verified `async`/nullable correctness.
-- Decisions I directed (with AI as a sounding board): the single-project layered structure, reserve-stock-on-draft invariant, snapshotting unit price, 404-over-403 for ownership, in-memory client token, and Testcontainers for integration tests.
-- Corrections I made to AI output: fixed record validation attributes to target constructor parameters (ASP.NET Core rejects them on the generated properties); removed a transitively-vulnerable OpenAPI package that wasn't needed; pinned EF Core package versions to resolve an assembly conflict; and used the non-obsolete Testcontainers builder constructor.
-- Challenges: modelling stock consistency across the order lifecycle and being explicit about its concurrency limits, and keeping the Web Components cleanly bounded (shared store + custom events) without a framework.
