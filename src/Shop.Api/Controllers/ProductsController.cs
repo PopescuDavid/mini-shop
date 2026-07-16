@@ -31,12 +31,17 @@ public class ProductsController(ShopDbContext db) : ControllerBase
         return Ok(new PagedResult<ProductDto>(items, page, pageSize, totalCount));
     }
 
-    private static IQueryable<Product> Sort(IQueryable<Product> query, string? sortBy, bool descending) => sortBy?.ToLowerInvariant() switch
+    private static IQueryable<Product> Sort(IQueryable<Product> query, string? sortBy, bool descending)
     {
-        "price" => descending ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price),
-        "stock" or "stockquantity" => descending ? query.OrderByDescending(p => p.StockQuantity) : query.OrderBy(p => p.StockQuantity),
-        "category" => descending ? query.OrderByDescending(p => p.Category) : query.OrderBy(p => p.Category),
-        "createdat" => descending ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt),
-        _ => descending ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name)
-    };
+        var ordered = sortBy?.ToLowerInvariant() switch
+        {
+            "price" => descending ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price),
+            "stock" or "stockquantity" => descending ? query.OrderByDescending(p => p.StockQuantity) : query.OrderBy(p => p.StockQuantity),
+            "category" => descending ? query.OrderByDescending(p => p.Category) : query.OrderBy(p => p.Category),
+            "createdat" => descending ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt),
+            _ => descending ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name)
+        };
+
+        return ordered.ThenBy(p => p.Id);
+    }
 }

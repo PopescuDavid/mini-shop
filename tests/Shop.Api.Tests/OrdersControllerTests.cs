@@ -25,6 +25,27 @@ public class OrdersControllerTests(ShopApiFactory factory) : IClassFixture<ShopA
     }
 
     [Fact]
+    public async Task Health_endpoint_reports_healthy()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/health");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Login_with_an_unknown_email_is_unauthorized()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/auth/login", new { email = "nobody@shop.test", password = Password });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Order_endpoints_require_authentication()
     {
         var client = factory.CreateClient();

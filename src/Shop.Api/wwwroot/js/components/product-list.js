@@ -29,7 +29,8 @@ class ProductList extends HTMLElement {
 
     render() {
         if (this.#error) {
-            this.shadowRoot.innerHTML = `<div class="card"><p class="error">${this.#error}</p></div>`;
+            this.shadowRoot.innerHTML = `<div class="card"><p class="error"></p></div>`;
+            this.shadowRoot.querySelector('.error').textContent = this.#error;
             return;
         }
         if (!this.#result) {
@@ -58,9 +59,7 @@ class ProductList extends HTMLElement {
                     <thead>
                         <tr><th>Name</th><th>Category</th><th class="num">Price</th><th class="num">Stock</th><th></th></tr>
                     </thead>
-                    <tbody>
-                        ${items.map(product => this.#row(product)).join('')}
-                    </tbody>
+                    <tbody></tbody>
                 </table>
                 <div class="row spread pager">
                     <button id="prev" ${page <= 1 ? 'disabled' : ''}>Prev</button>
@@ -69,21 +68,45 @@ class ProductList extends HTMLElement {
                 </div>
             </div>`;
 
+        const tbody = this.shadowRoot.querySelector('tbody');
+        for (const product of items) tbody.append(this.#row(product));
+
         this.#bind(items, totalPages);
     }
 
     #row(product) {
-        return `
-            <tr>
-                <td>${product.name}</td>
-                <td class="muted">${product.category}</td>
-                <td class="num">${money(product.price)}</td>
-                <td class="num">${product.stockQuantity}</td>
-                <td class="num">
-                    <input class="qty" type="number" min="1" value="1" data-qty="${product.id}">
-                    <button data-add="${product.id}">Add</button>
-                </td>
-            </tr>`;
+        const tr = document.createElement('tr');
+
+        const name = document.createElement('td');
+        name.textContent = product.name;
+
+        const category = document.createElement('td');
+        category.className = 'muted';
+        category.textContent = product.category;
+
+        const price = document.createElement('td');
+        price.className = 'num';
+        price.textContent = money(product.price);
+
+        const stock = document.createElement('td');
+        stock.className = 'num';
+        stock.textContent = product.stockQuantity;
+
+        const action = document.createElement('td');
+        action.className = 'num';
+        const input = document.createElement('input');
+        input.className = 'qty';
+        input.type = 'number';
+        input.min = '1';
+        input.value = '1';
+        input.dataset.qty = product.id;
+        const add = document.createElement('button');
+        add.dataset.add = product.id;
+        add.textContent = 'Add';
+        action.append(input, add);
+
+        tr.append(name, category, price, stock, action);
+        return tr;
     }
 
     #bind(items, totalPages) {

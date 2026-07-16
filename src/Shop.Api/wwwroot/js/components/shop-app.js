@@ -39,7 +39,7 @@ class ShopApp extends HTMLElement {
             <header class="topbar">
                 <span class="brand">Mini Shop</span>
                 <span class="session">
-                    <span class="muted">${store.state.user}</span>
+                    <span class="muted" id="user"></span>
                     <button class="ghost" id="logout">Log out</button>
                 </span>
             </header>
@@ -47,6 +47,8 @@ class ShopApp extends HTMLElement {
                 <section id="catalogue"></section>
                 <aside id="sidebar"></aside>
             </main>`;
+
+        this.shadowRoot.getElementById('user').textContent = store.state.user;
 
         this.shadowRoot.getElementById('logout').addEventListener('click', () => {
             api.setToken(null);

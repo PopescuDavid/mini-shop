@@ -27,6 +27,7 @@ public class ShopDbContext(DbContextOptions<ShopDbContext> options) : DbContext(
             entity.Property(p => p.Category).HasMaxLength(100);
             entity.Property(p => p.Price).HasPrecision(18, 2);
             entity.HasIndex(p => p.Sku).IsUnique();
+            entity.ToTable(t => t.HasCheckConstraint("CK_Products_StockQuantity", "\"StockQuantity\" >= 0"));
         });
 
         modelBuilder.Entity<Coupon>(entity =>
@@ -35,11 +36,13 @@ public class ShopDbContext(DbContextOptions<ShopDbContext> options) : DbContext(
             entity.Property(c => c.Type).HasConversion<string>().HasMaxLength(32);
             entity.Property(c => c.Value).HasPrecision(18, 2);
             entity.HasIndex(c => c.Code).IsUnique();
+            entity.ToTable(t => t.HasCheckConstraint("CK_Coupons_Value", "\"Value\" >= 0"));
         });
 
         modelBuilder.Entity<Order>(entity =>
         {
             entity.Property(o => o.Status).HasConversion<string>().HasMaxLength(32);
+            entity.Property(o => o.DiscountAmount).HasPrecision(18, 2);
             entity.HasIndex(o => new { o.Status, o.UpdatedAt });
             entity.HasQueryFilter(o => !o.IsDeleted);
             entity.HasOne(o => o.User).WithMany().HasForeignKey(o => o.UserId).OnDelete(DeleteBehavior.Cascade);

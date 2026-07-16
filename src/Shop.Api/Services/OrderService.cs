@@ -39,6 +39,7 @@ public class OrderService(ShopDbContext db, IOrderPricingService pricing) : IOrd
 
         order.Coupon = await ResolveCouponAsync(request.CouponCode);
         order.CouponId = order.Coupon?.Id;
+        SnapshotDiscount(order);
 
         db.Orders.Add(order);
         await db.SaveChangesAsync();
@@ -103,6 +104,7 @@ public class OrderService(ShopDbContext db, IOrderPricingService pricing) : IOrd
 
         order.Coupon = await ResolveCouponAsync(request.CouponCode);
         order.CouponId = order.Coupon?.Id;
+        SnapshotDiscount(order);
 
         ApplyStatusTransition(order, request.Status);
 
@@ -191,9 +193,15 @@ public class OrderService(ShopDbContext db, IOrderPricingService pricing) : IOrd
         order.Status = OrderStatus.Placed;
     }
 
+    private void SnapshotDiscount(Order order) =>
+        order.DiscountAmount = pricing.Calculate(Lines(order), order.Coupon).Discount;
+
     private OrderDto ToDto(Order order)
     {
-        var totals = pricing.Calculate(order.Items.Select(i => new PricingLine(i.UnitPrice, i.Quantity)), order.Coupon);
+        // Read against the snapshotted discount, not the live coupon, so a placed
+        // order's total never shifts if the coupon is edited afterwards.
+        var subtotal = pricing.Subtotal(Lines(order));
+        var discount = Math.Clamp(order.DiscountAmount, 0m, subtotal);
 
         var items = order.Items
             .OrderBy(i => i.Product.Name)
@@ -203,7 +211,7 @@ public class OrderService(ShopDbContext db, IOrderPricingService pricing) : IOrd
                 i.Product.Name,
                 i.Quantity,
                 i.UnitPrice,
-                Math.Round(i.UnitPrice * i.Quantity, 2, MidpointRounding.AwayFromZero)))
+                pricing.Subtotal([new PricingLine(i.UnitPrice, i.Quantity)])))
             .ToList();
 
         return new OrderDto(
@@ -211,10 +219,13 @@ public class OrderService(ShopDbContext db, IOrderPricingService pricing) : IOrd
             order.Status.ToString(),
             items,
             order.Coupon?.Code,
-            totals.Subtotal,
-            totals.Discount,
-            totals.Total,
+            subtotal,
+            discount,
+            subtotal - discount,
             order.CreatedAt,
             order.UpdatedAt);
     }
+
+    private static IEnumerable<PricingLine> Lines(Order order) =>
+        order.Items.Select(i => new PricingLine(i.UnitPrice, i.Quantity));
 }

@@ -8,14 +8,17 @@ public record OrderTotals(decimal Subtotal, decimal Discount, decimal Total);
 
 public interface IOrderPricingService
 {
+    decimal Subtotal(IEnumerable<PricingLine> lines);
     OrderTotals Calculate(IEnumerable<PricingLine> lines, Coupon? coupon);
 }
 
 public class OrderPricingService : IOrderPricingService
 {
+    public decimal Subtotal(IEnumerable<PricingLine> lines) => Round(lines.Sum(line => line.UnitPrice * line.Quantity));
+
     public OrderTotals Calculate(IEnumerable<PricingLine> lines, Coupon? coupon)
     {
-        var subtotal = Round(lines.Sum(line => line.UnitPrice * line.Quantity));
+        var subtotal = Subtotal(lines);
         var discount = coupon is null ? 0m : Round(DiscountFor(subtotal, coupon));
         discount = Math.Clamp(discount, 0m, subtotal);
 

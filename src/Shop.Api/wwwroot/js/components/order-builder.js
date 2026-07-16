@@ -24,37 +24,65 @@ class OrderBuilder extends HTMLElement {
         this.shadowRoot.innerHTML = `
             <div class="card">
                 <h2>New order</h2>
-                ${cart.length === 0 ? this.#empty() : this.#cart(cart, subtotal)}
-                ${this.#error ? `<p class="error">${this.#error}</p>` : ''}
+                <div id="body"></div>
+                <p class="error" hidden></p>
             </div>`;
+
+        const body = this.shadowRoot.getElementById('body');
+        if (cart.length === 0) {
+            body.innerHTML = `<p class="muted">Add products from the catalogue to start an order.</p>`;
+        } else {
+            this.#cart(body, cart, subtotal);
+        }
+
+        if (this.#error) {
+            const error = this.shadowRoot.querySelector('.error');
+            error.textContent = this.#error;
+            error.hidden = false;
+        }
 
         this.shadowRoot.querySelectorAll('[data-remove]').forEach(button =>
             button.addEventListener('click', () => store.removeFromCart(button.dataset.remove)));
         this.shadowRoot.getElementById('create')?.addEventListener('click', () => this.#create());
     }
 
-    #empty() {
-        return `<p class="muted">Add products from the catalogue to start an order.</p>`;
-    }
-
-    #cart(cart, subtotal) {
-        return `
-            <table>
-                <tbody>
-                    ${cart.map(line => `
-                        <tr>
-                            <td>${line.name}</td>
-                            <td class="num muted">×${line.quantity}</td>
-                            <td class="num">${money(line.price * line.quantity)}</td>
-                            <td class="num"><button class="ghost danger" data-remove="${line.productId}">✕</button></td>
-                        </tr>`).join('')}
-                </tbody>
-            </table>
-            <div class="row spread"><span class="muted">Subtotal</span><strong>${money(subtotal)}</strong></div>
+    #cart(body, cart, subtotal) {
+        body.innerHTML = `
+            <table><tbody></tbody></table>
+            <div class="row spread"><span class="muted">Subtotal</span><strong id="subtotal"></strong></div>
             <label class="field">Coupon code
                 <input id="coupon" placeholder="e.g. SAVE10">
             </label>
             <button id="create" class="primary">Create order</button>`;
+
+        const tbody = body.querySelector('tbody');
+        for (const line of cart) {
+            const tr = document.createElement('tr');
+
+            const name = document.createElement('td');
+            name.textContent = line.name;
+
+            const quantity = document.createElement('td');
+            quantity.className = 'num muted';
+            quantity.textContent = `×${line.quantity}`;
+
+            const lineTotal = document.createElement('td');
+            lineTotal.className = 'num';
+            lineTotal.textContent = money(line.price * line.quantity);
+
+            const action = document.createElement('td');
+            action.className = 'num';
+            const remove = document.createElement('button');
+            remove.className = 'ghost danger';
+            remove.dataset.remove = line.productId;
+            remove.textContent = '✕';
+            action.append(remove);
+
+            tr.append(name, quantity, lineTotal, action);
+            tbody.append(tr);
+        }
+
+        body.querySelector('#subtotal').textContent = money(subtotal);
     }
 
     async #create() {

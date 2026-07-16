@@ -30,6 +30,14 @@ services:
       Sweeper__DraftExpiryMinutes: "1"
     ports:
       - "8080:8080"
+    healthcheck:
+      # Dependency-free TCP liveness probe (the runtime image ships no curl/wget);
+      # the richer /health HTTP endpoint with a DB check is available for orchestrators.
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/localhost/8080' || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
 
 volumes:
   pgdata:

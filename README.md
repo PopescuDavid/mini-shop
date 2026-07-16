@@ -69,6 +69,7 @@ All `/orders` endpoints require a bearer token and operate only on orders owned 
 | `GET /orders/{id}` | Fetch a single order with items and computed subtotal/discount/total. |
 | `PUT /orders/{id}` | Replace items, change quantities, apply/remove a coupon, or place the order. |
 | `DELETE /orders/{id}` | Soft-delete (cancel) an order and release its reserved stock. |
+| `GET /health` | Readiness probe — returns `Healthy` and checks DB connectivity (the Docker container uses a lightweight TCP liveness probe). |
 
 Example requests for every endpoint are in [`requests.http`](./requests.http) (VS Code REST Client / Rider). Quick curl:
 
@@ -94,7 +95,7 @@ dotnet test
 ```
 
 - **Unit** (`OrderPricingServiceTests`): subtotal, percentage/fixed coupons, clamping, rounding — the pure pricing logic.
-- **Integration** (`OrdersControllerTests`): drives the real HTTP stack against a disposable PostgreSQL container (Testcontainers) — login, auth required (401), ownership isolation (404), stock validation (409), and computed totals.
+- **Integration** (`OrdersControllerTests`, `OrderLifecycleTests`): drive the real HTTP stack against a disposable PostgreSQL container (Testcontainers) — login, auth required (401), ownership isolation (404), stock validation (409) and computed totals; plus the full order lifecycle: quantity increase/decrease, add/remove line with stock restoration, apply/remove coupon on update, duplicate-line consolidation, invalid quantity (400), Draft→Placed, rejecting edits to a placed order (409), delete releasing stock, and the abandoned-draft sweeper expiring a stale draft and releasing its reserved stock.
 
 Integration tests require Docker to be running. If Docker Hub credentials on the machine are stale (Testcontainers fails to pull its reaper image with an authentication error), either run `docker logout` or set `TESTCONTAINERS_RYUK_DISABLED=true` before `dotnet test`.
 
@@ -120,10 +121,15 @@ mini-shop/
 
 - **One project, layered by responsibility** (Controllers → Services → EF Core). The domain is small; a multi-project Clean Architecture would add ceremony without payoff. Controllers stay thin; the rules live in services.
 - **Pricing is a pure service** (`OrderPricingService`) with no I/O, so it is exhaustively unit-testable in isolation.
-- **Unit price is snapshotted** on each order item, so an order's totals stay stable even if the catalogue price changes later. Totals are computed on read, never stored, so they cannot drift.
+- **Unit price and the applied discount are snapshotted** — the unit price on each order item and the resolved discount amount on the order — so an order's total stays stable even if the catalogue price or the coupon is changed later. The subtotal is still derived on read from the snapshotted line prices; only the coupon-dependent discount needed freezing.
 - **Money** is `decimal` mapped to `numeric(18,2)`; discounts round half-away-from-zero and the total is clamped at zero.
 - **Ownership** is enforced by filtering every order query on the authenticated user id (from the JWT `sub` claim). Accessing another user's order returns **404**, not 403, so the API does not leak the existence of other users' resources.
+- **Login runs in constant time** — a password hash is always verified (against a dummy hash when the email is unknown), so response timing does not reveal which emails are registered.
+- **Stock and coupon values are guarded at the database** with `CHECK` constraints (`StockQuantity >= 0`, coupon `Value >= 0`), so even a bug or a concurrent write cannot persist impossible data.
 - **Errors** are returned as RFC-7807 `ProblemDetails` via a single global exception handler mapping domain exceptions to 400/404/409.
+- **Paging is deterministic**: every product sort has a unique tiebreaker (`ThenBy(Id)`), so rows never shuffle between pages when the primary key has duplicates (e.g. equal category or price).
+- **Configuration is validated at startup** (`ValidateDataAnnotations().ValidateOnStart()` for `Jwt`/`Sweeper`), so a missing signing key or nonsensical interval fails fast with a clear message instead of surfacing later.
+- **The front-end never uses HTML string interpolation for data**: dynamic values (product names, order fields, coupons, error messages, the reflected order-id) are written via `textContent`/DOM construction, not `innerHTML`, so untrusted or reflected strings cannot inject markup.
 - **The front-end is served by the API** from `wwwroot`, so everything is same-origin — no CORS, and one command runs the whole stack.
 
 ### Order lifecycle & stock
@@ -153,7 +159,7 @@ sweeper           → Expired      stale drafts release their stock
 - Checkout/payment, refresh tokens, product/coupon CRUD, order listing/pagination, and OpenAPI/Swagger UI.
 
 **With more time**
-- Optimistic concurrency on stock; a scale-safe (single-owner) sweeper; more integration coverage (update/place/expire paths); request-validation via FluentValidation; login rate-limiting; observability (structured tracing/metrics); and a CI pipeline running the test suite.
+- Optimistic concurrency on stock (an `xmin` rowversion on `Product` with a retry) to close the documented read-modify-write race; a scale-safe (single-owner) sweeper for multi-instance deployments; request-validation via FluentValidation; login rate-limiting; observability (structured tracing/metrics); and a CI pipeline running the test suite.
 
 ## AI usage
 

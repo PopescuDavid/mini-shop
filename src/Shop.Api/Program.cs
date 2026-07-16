@@ -16,21 +16,30 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddHealthChecks().AddDbContextCheck<ShopDbContext>();
 
 builder.Services.AddDbContext<ShopDbContext>(options => options
     .UseNpgsql(builder.Configuration.GetConnectionString("Default"))
     .ConfigureWarnings(w => w.Ignore(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)));
 
-builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
-builder.Services.Configure<SweeperOptions>(builder.Configuration.GetSection(SweeperOptions.SectionName));
+builder.Services.AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddOptions<SweeperOptions>()
+    .Bind(builder.Configuration.GetSection(SweeperOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IOrderPricingService, OrderPricingService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddHostedService<AbandonedOrderSweeper>();
+builder.Services.AddScoped<IAbandonedOrderSweeper, AbandonedOrderSweeper>();
+builder.Services.AddHostedService<AbandonedOrderSweeperWorker>();
 
-var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+    ?? throw new InvalidOperationException($"Missing '{JwtOptions.SectionName}' configuration section.");
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -61,6 +70,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 await app.MigrateAndSeedAsync();
 
