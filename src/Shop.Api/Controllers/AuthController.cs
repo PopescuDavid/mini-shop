@@ -13,10 +13,6 @@ namespace Shop.Api.Controllers;
 public class AuthController(ShopDbContext db, IPasswordHasher<User> passwordHasher, ITokenService tokenService) : ControllerBase
 {
     private static readonly User DummyUser = new() { Email = string.Empty, PasswordHash = string.Empty };
-
-    // A real, precomputed hash so verification does the same PBKDF2 work whether or
-    // not the user exists — otherwise response timing would leak which emails are
-    // registered (user enumeration).
     private static readonly string DummyPasswordHash =
         new PasswordHasher<User>().HashPassword(DummyUser, "timing-attack-mitigation");
 

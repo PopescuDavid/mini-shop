@@ -8,9 +8,6 @@ public class Order : IAuditable
     public OrderStatus Status { get; set; }
     public Guid? CouponId { get; set; }
     public Coupon? Coupon { get; set; }
-
-    // Discount snapshot, frozen at each write so an order's total stays stable even
-    // if the coupon is later edited or deactivated (mirrors the unit-price snapshot).
     public decimal DiscountAmount { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime CreatedAt { get; set; }

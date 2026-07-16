@@ -198,8 +198,6 @@ public class OrderService(ShopDbContext db, IOrderPricingService pricing) : IOrd
 
     private OrderDto ToDto(Order order)
     {
-        // Read against the snapshotted discount, not the live coupon, so a placed
-        // order's total never shifts if the coupon is edited afterwards.
         var subtotal = pricing.Subtotal(Lines(order));
         var discount = Math.Clamp(order.DiscountAmount, 0m, subtotal);
 
